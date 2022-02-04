@@ -1,1 +1,5 @@
-# Stochastic_Differential_Equations
+# Stochastic Differential Equations
+
+## Diploma work
+
+In working ...
