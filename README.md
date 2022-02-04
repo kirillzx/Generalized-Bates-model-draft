@@ -1,5 +1,5 @@
 # Stochastic Differential Equations
 
-## Diploma work
+## Graduate work
 
 In working ...
