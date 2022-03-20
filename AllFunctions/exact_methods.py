@@ -75,14 +75,64 @@ def Chi_Psi(a, b, c, d, k):
     value = {"chi":chi,"psi":psi }
     return value
 
-def BS_Call_Option_Price(type_option, S_0, K, sigma, tau, r):
-    if K is list:
-        K = np.array(K).reshape([len(K),1])
-    d1    = (np.log(S_0 / K) + (r + 0.5 * np.power(sigma,2.0))
-    * tau) / (sigma * np.sqrt(tau))
-    d2    = d1 - sigma * np.sqrt(tau)
+def BS_Call_Option_Price(type_option, s0, K, sigma, tau, r):
+    # if isinstance(K, list):
+    #     K = np.array(K).reshape([len(K),1])
+    K = np.array(K)
+
+    d1 = (np.log(s0 / K) + (r + 0.5 * np.power(sigma,2.0))* tau) / (sigma * np.sqrt(tau))
+    d2 = d1 - sigma * np.sqrt(tau)
+
     if type_option == 'c' or type_option == 1:
-        value = stats.norm.cdf(d1) * S_0 - stats.norm.cdf(d2) * K * np.exp(-r * tau)
+        value = stats.norm.cdf(d1) * s0 - stats.norm.cdf(d2) * K * np.exp(-r * tau)
     elif type_option == 'p' or type_option == -1:
-        value = stats.norm.cdf(-d2) * K * np.exp(-r * tau) - stats.norm.cdf(-d1)*S_0
+        value = stats.norm.cdf(-d2) * K * np.exp(-r * tau) - stats.norm.cdf(-d1)*s0
+
+    return value
+
+
+def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L,P0T):
+
+    # cf   - Characteristic function is a function, in the book denoted by \varphi
+    # CP   - C for call and P for put
+    # s0   - Initial stock price
+    # tau  - Time to maturity
+    # K    - List of strikes
+    # N    - Number of expansion terms
+    # L    - Size of truncation domain (typ.:L=8 or L=10)
+    # P0T  - Zero-coupon bond for maturity T.
+
+    # Reshape K to become a column vector
+
+    if K is not np.array:
+        K = np.array(K).reshape([len(K),1])
+
+    # Assigning i=sqrt(-1)
+
+    i = np.complex(0.0,1.0)
+    x0 = np.log(s0 / K)
+
+    # Truncation domain
+
+    a = 0.0 - L * np.sqrt(tau)
+    b = 0.0 + L * np.sqrt(tau)
+
+    # Summation from k = 0 to k=N-1
+
+    k = np.linspace(0,N-1,N).reshape([N,1])
+    u = k * np.pi / (b - a)
+
+    # Determine coefficients for put prices
+
+    H_k = CallPutCoefficients(OptionType.PUT,a,b,k)
+    mat = np.exp(i * np.outer((x0 - a) , u))
+    temp = cf(u) * H_k
+    temp[0] = 0.5 * temp[0]
+    value = K * np.real(mat.dot(temp))
+
+    # We use the put-call parity for call options
+
+    if CP == OptionType.CALL:
+        value = value + s0 - K * P0T
+
     return value
