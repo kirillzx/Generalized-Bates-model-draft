@@ -124,7 +124,7 @@ def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L,P0T):
 
     # Determine coefficients for put prices
 
-    H_k = CallPutCoefficients(OptionType.PUT,a,b,k)
+    H_k = Hk_Coefficients('p',a,b,k)
     mat = np.exp(i * np.outer((x0 - a) , u))
     temp = cf(u) * H_k
     temp[0] = 0.5 * temp[0]
@@ -132,7 +132,7 @@ def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L,P0T):
 
     # We use the put-call parity for call options
 
-    if CP == OptionType.CALL:
+    if CP == 'c':
         value = value + s0 - K * P0T
 
     return value
