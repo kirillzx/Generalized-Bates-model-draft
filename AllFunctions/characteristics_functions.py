@@ -39,38 +39,55 @@ def ChFBatesModel(r,tau,kappa,gamma,vbar,v0,rho,xiP,muJ,sigmaJ):
     cf = lambda u: np.exp(A(u) + C(u)*v0)
     return cf
 
-def EFun(tau, u, e1, e2, k, gamma):
-    e1 = e1(u)
-    e2 = e2(u)
+def EFun(tau, u, k, gamma):
+    # e1 = e1(u)
+    # e2 = e2(u)
+    i = complex(0, 1)
+    e1 = np.sqrt(k**2 + gamma**2 * (u**2 + i*u))
+    e2 = (k - e1) / (k + e1)
 
     eFun = ((k - e1) / gamma**2) * (1 - np.exp(-e1*tau))/(1 - e2 * np.exp(-e1*tau))
     return eFun
 
-def CFun(tau, u, c1, c2, kr, gammar):
-    c1 = c1(u)
-    c2 = c2(u)
+def CFun(tau, u, kr, gammar):
+    i = complex(0, 1)
+    c1 = np.sqrt(kr**2 + gammar**2 * (u**2 + i*u))
+    c2 = (kr - c1) / (kr + c1)
 
     cFun = ((kr - c1) / gammar**2) * (1 - np.exp(-c1*tau))/(1 - c2 * np.exp(-c1*tau))
     return cFun
 
-def DFun(tau, u, k, gamma, d1, l1, v0, vb, krho, T):
-    d1 = d1(u)
-    l1 = l1(u)
+def DFun(tau, u, k, gamma, v0, vb, krho, T):
+    i = complex(0, 1)
+    e1 = np.sqrt(k**2 + gamma**2 * (u**2 + i*u))
+    e2 = (k - e1) / (k + e1)
+    d1 = i*u * (k - e1)/gamma**2
+    l1 = -np.log( (np.exp(-e1) - e2*np.exp(-e1))/(1 - e2*np.exp(-e1)) )
 
     dFun = gamma * d1 * ( np.exp(-k*T)*(v0 - vb)/(krho + k) + vb/krho + np.exp(-k*T)*(vb - v0)/(krho + k - l1) - vb/(krho - l1) + \
         (- np.exp(-k*T)*(v0-vb)/(k + krho) - vb/krho + vb/(krho - l1) - np.exp(-k*T)*(vb-v0)/(k + krho - l1) ) )
     return dFun
 
 
-def AFun(tau, u, muJ, sigmaJ, xip, k, vb, gamma, l1, d1, v0, krho, murho,
-                        sigmarho, rho4, rho5, T, kr, gammar, mur, c1, c2, e1, r0):
+def AFun(tau, u, muJ, sigmaJ, xip, k, vb, gamma, v0, krho, murho,
+                        sigmarho, rho4, rho5, T, kr, gammar, mur, r0):
     i = complex(0, 1)
 
-    e1 = e1(u)
-    c1 = c1(u)
-    c2 = c2(u)
+    # e1 = e1(u)
+    # c1 = c1(u)
+    # c2 = c2(u)
     # d1 = d1(u)
     # l1 = l1(u)
+
+    e1 = np.sqrt(k**2 + gamma**2 * (u**2 + i*u))
+    e2 = (k - e1) / (k + e1)
+    d1 = i*u * (k - e1)/gamma**2
+    l1 = -np.log( (np.exp(-e1) - e2*np.exp(-e1))/(1 - e2*np.exp(-e1)) )
+    c1 = np.sqrt(kr**2 + gammar**2 * (u**2 + i*u))
+    c2 = (kr - c1) / (kr + c1)
+
+    # print(e1)
+    # print(d1)
 
 
     ct = lambda t: 1/(4*k) * gamma**2 * (1 - np.exp(-k*t))
@@ -95,28 +112,51 @@ def AFun(tau, u, muJ, sigmaJ, xip, k, vb, gamma, l1, d1, v0, krho, murho,
     I1 = -i*u*(np.exp(muJ+0.5*sigmaJ**2) - 1)*tau*xip + xip*(np.exp(muJ*i*u - 0.5*sigmaJ**2 * u**2) - 1)*tau +\
         k*vb*(k-e1)/gamma**2 * (tau - np.exp(-l1*tau)/(-l1))
 
+    # print(I1)
+
     z = np.linspace(0, tau, 100)
-    print(d1)
-    f_I21 = lambda z1,u: np.exp(-c*(T-z1)) * DFun(z1, u, k, gamma, d1, l1, v0, vb, krho, T)
-    I21 = integrate.trapz(np.array(list(map(lambda z1: f_I21(z1, u), z))), z)
+
+    # f_I21 = lambda z1,u: np.exp(-c*(T-z1)) * DFun(z1, u, k, gamma, d1, l1, v0, vb, krho, T)
+    # I21 = [integrate.trapz(np.array(list(map(lambda z1: f_I21(z1, var), z))), z) for var in u]
+
+    # f_I21 = np.exp(-c*(T-z)) * DFun(z, u, k, gamma, d1, l1, v0, vb, krho, T)
+    print(z)
+    dFun_val = lambda z, u: DFun(z, u, k, gamma, v0, vb, krho, T)
+    f_I21 = dFun_val
+    print(dFun_val)
+
+    # I21 = integrate.trapz(f_I21, z)
+    I21 = integrate.trapz(f_I21(z,u), z).reshape(u.size,1)
 
     I2 = (krho*murho + sigmarho*rho4*i*u*a) * l1*(krho*(krho - l1)*(v0 - vb) + np.exp(k*T)*(k+krho)*(k+krho-l1)*vb)/(krho**2 * (k+krho)*(krho - l1)*(k+krho-l1)) + ( np.exp(k*(tau-T))*(v0-vb)*tau)/(k+krho) + vb*tau/krho +\
         (np.exp(-l1*tau)*vb*tau)/(l1-krho) + (np.exp(-k*T+k*tau-l1*tau)*(vb-v0)*tau)/(k+krho-l1) +\
         sigmarho*rho4*i*u*b * I21
 
-    f = lambda z, u: DFun(z, u, k, gamma, d1, l1, v0, vb, krho, T)
+    print(I21)
 
-    I3 = 0.5*sigmarho**2 * integrate.trapz(np.array(list(map(lambda z: (f(z, u))**2, z))), z)
+    # f = lambda z, u: DFun(z, u, k, gamma, d1, l1, v0, vb, krho, T)
+    f = DFun(z, u, k, gamma, v0, vb, krho, T)
+    I3 = 0.5*sigmarho**2 * integrate.trapz(f**2, z)
 
-    f_I41 = lambda z,u: CFun(z, u, c1, c2, kr, gammar)
-    f_I42 = lambda z,u: np.exp(-o*(T-z)) * CFun(z, u, c1, c2, kr, gammar)
-    f_I43 = lambda z,u: np.exp(-c*(T-z)) * CFun(z, u, c1, c2, kr, gammar)
-    f_I44 = lambda z,u: np.exp((-o-c)*(T-z)) * CFun(z, u, c1, c2, kr, gammar)
+    # I3 = 0.5*sigmarho**2 * [integrate.trapz(np.array(list(map(lambda z: (f(z, var))**2, z))), z) for var in u]
 
-    I41 = integrate.trapz(np.array(list(map(lambda z: f_I41(z, u), z))), z)
-    I42 = integrate.trapz(np.array(list(map(lambda z: f_I42(z, u), z))), z)
-    I43 = integrate.trapz(np.array(list(map(lambda z: f_I43(z, u), z))), z)
-    I44 = integrate.trapz(np.array(list(map(lambda z: f_I44(z, u), z))), z)
+    # f_I41 = lambda z,u: CFun(z, u, c1, c2, kr, gammar)
+    # f_I42 = lambda z,u: np.exp(-o*(T-z)) * CFun(z, u, c1, c2, kr, gammar)
+    # f_I43 = lambda z,u: np.exp(-c*(T-z)) * CFun(z, u, c1, c2, kr, gammar)
+    # f_I44 = lambda z,u: np.exp((-o-c)*(T-z)) * CFun(z, u, c1, c2, kr, gammar)
+    f_I41 = CFun(z, u, c1, c2, kr, gammar)
+    f_I42 = np.exp(-o*(T-z)) * CFun(z, u, kr, gammar)
+    f_I43 = np.exp(-c*(T-z)) * CFun(z, u, kr, gammar)
+    f_I44 = np.exp((-o-c)*(T-z)) * CFun(z, u, kr, gammar)
+
+    # I41 = [integrate.trapz(np.array(list(map(lambda z: f_I41(z, var), z))), z) for var in u]
+    # I42 = [integrate.trapz(np.array(list(map(lambda z: f_I42(z, var), z))), z) for var in u]
+    # I43 = [integrate.trapz(np.array(list(map(lambda z: f_I43(z, var), z))), z) for var in u]
+    # I44 = [integrate.trapz(np.array(list(map(lambda z: f_I44(z, var), z))), z) for var in u]
+    I41 = integrate.trapz(f_I41, z)
+    I42 = integrate.trapz(f_I42, z)
+    I43 = integrate.trapz(f_I43, z)
+    I44 = integrate.trapz(f_I44, z)
 
     I4 = (kr*mur + gammar*rho5*i*u*m*a) * I41 + gammar*rho5*i*u*a*n* I42 +\
         gammar*rho5*i*u*m*b* I43 + gammar*rho5*i*u*n*b * I44
@@ -128,26 +168,25 @@ def ChFBates_StochIR_StochCor(tau, T, k, gamma, vb, kr, gammar, mur, krho, murho
     i = complex(0.0, 1.0)
 
     #define E function
-    e1 = lambda u: np.sqrt(k**2 + gamma**2 * (u**2 + i*u))
-    e2 = lambda u: (k - e1(u)) / (k + e1(u))
+    # e1 = lambda u: np.sqrt(k**2 + gamma**2 * (u**2 + i*u))
+    # e2 = lambda u: (k - e1(u)) / (k + e1(u))
+    #
+    eFun = lambda u: EFun(tau, u, k, gamma)
+    #
+    # #define C function
+    # c1 = lambda u: np.sqrt(kr**2 + gammar**2 * (u**2 + i*u))
+    # c2 = lambda u: (kr - c1(u)) / (kr + c1(u))
+    #
+    cFun = lambda u: CFun(tau, u, kr, gammar)
+    # #define D function
+    # d1 = lambda u: i*u * (k - e1(u))/gamma**2
+    # l1 = lambda u: -np.log( (np.exp(-e1(u)) - e2(u)*np.exp(-e1(u)))/(1 - e2(u)*np.exp(-e1(u))) )
 
-    eFun = lambda u: EFun(tau, u, e1, e2, k, gamma)
+    dFun = lambda u: DFun(tau, u, k, gamma, v0, vb, krho, T)
 
-    #define C function
-    c1 = lambda u: np.sqrt(kr**2 + gammar**2 * (u**2 + i*u))
-    c2 = lambda u: (kr - c1(u)) / (kr + c1(u))
-
-    cFun = lambda u: CFun(tau, u, c1, c2, kr, gammar)
-    print(e1(1))
-    #define D function
-    d1 = lambda u: i*u * (k - e1(u))/gamma**2
-    print(d1(1))
-    l1 = lambda u: -np.log( (np.exp(-e1(u)) - e2(u)*np.exp(-e1(u)))/(1 - e2(u)*np.exp(-e1(u))) )
-    print(d1)
-    dFun = lambda u: DFun(tau, u, k, gamma, d1, l1, v0, vb, krho, T)
-
-    aFun = lambda u: AFun(tau, u, muJ, sigmaJ, xip, k, vb, gamma, l1, d1, v0, krho, murho,
-                            sigmarho, rho4, rho5, T, kr, gammar, mur, c1, c2, e1, r0)
+    #define A function
+    aFun = lambda u: AFun(tau, u, muJ, sigmaJ, xip, k, vb, gamma, v0, krho, murho,
+                            sigmarho, rho4, rho5, T, kr, gammar, mur, r0)
 
     cf = lambda u: np.exp(aFun(u) + cFun(u)*r0 + dFun(u)*rho0 + eFun(u)*v0)
 
