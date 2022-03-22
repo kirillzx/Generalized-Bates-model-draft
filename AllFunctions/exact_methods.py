@@ -103,27 +103,21 @@ def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L,P0T):
     # P0T  - Zero-coupon bond for maturity T.
 
     # Reshape K to become a column vector
-
     if K is not np.array:
         K = np.array(K).reshape([len(K),1])
 
-    # Assigning i=sqrt(-1)
-
-    i = np.complex(0.0,1.0)
+    i = complex(0.0,1.0)
     x0 = np.log(s0 / K)
 
     # Truncation domain
-
     a = 0.0 - L * np.sqrt(tau)
     b = 0.0 + L * np.sqrt(tau)
 
     # Summation from k = 0 to k=N-1
-
     k = np.linspace(0,N-1,N).reshape([N,1])
     u = k * np.pi / (b - a)
 
     # Determine coefficients for put prices
-
     H_k = Hk_Coefficients('p',a,b,k)
     mat = np.exp(i * np.outer((x0 - a) , u))
     temp = cf(u) * H_k
@@ -131,7 +125,6 @@ def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L,P0T):
     value = K * np.real(mat.dot(temp))
 
     # We use the put-call parity for call options
-
     if CP == 'c':
         value = value + s0 - K * P0T
 
