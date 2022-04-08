@@ -170,9 +170,70 @@ def heston_stoch_corr_AES(numberPaths, N, s0, v0, T, kappa, gamma, vbar, rho0, r
         X[:, t+1] = X[:, t] + (r - 0.5* V[:, t])*dt + rho[:, t]/gamma * (V[:, t+1] - V[:, t] - kappa*(vbar - V[:, t])*dt) + \
             (rho2-rho1*rho[:, t])/np.sqrt(1-rho1**2) * np.sqrt(V[:, t]) * 1/(np.sqrt(1-rho1**2)*sigmap) * (rho[:, t+1] - rho[:, t] - \
             kp*(mup - rho[:, t])*dt - rho1*sigmap* 1/(gamma*np.sqrt(V[:, t]))  * (V[:, t+1] - V[:, t] - kappa*(vbar - V[:, t])*dt) ) + \
-            np.sqrt(1- (rho[:, t])**2 - ((rho2-rho1*rho[:, t])/np.sqrt(1-rho1**2))**2)*np.sqrt(V[:, t]) * np.sqrt(dt) * Zx[:, t]
+            np.sqrt(abs(1- (rho[:, t])**2 - ((rho2-rho1*rho[:, t])/np.sqrt(1-rho1**2))**2))*np.sqrt(V[:, t]) * np.sqrt(dt) * Zx[:, t]
 
         time[t+1] = time[t] + dt
     S = np.exp(X)
 
     return time, S, V
+
+def bates_SC_SIR_AES(numberPaths, N, s0, v0, T, k, gamma, vb, kr, gammar, mur, krho, murho, sigmarho, rho4, rho5,
+                    xip, muJ, sigmaJ, r0, rho0):
+    X = np.zeros([numberPaths, N + 1])
+    S = np.zeros([numberPaths, N + 1])
+    V = np.zeros([numberPaths, N + 1])
+    R = np.zeros([numberPaths, N + 1])
+    rho = np.zeros([numberPaths, N + 1])
+
+    M_t = np.ones([numberPaths, N + 1])
+    time = np.zeros(N + 1)
+    dt = T/float(N)
+
+    Zx = np.random.normal(0, 1, [numberPaths, N])
+    Zrho = np.random.normal(0, 1, [numberPaths, N])
+    ZP = np.random.poisson(xip*dt, [numberPaths, N])
+    J = np.random.normal(muJ, sigmaJ, [numberPaths, N])
+
+    X[:, 0] = np.log(s0)
+    V[:, 0] = v0
+    rho[:, 0] = rho0
+    R[:, 0] = abs(r0)
+
+    EeJ = np.exp(muJ + 0.5 * sigmaJ**2)
+
+    for t in range(N):
+
+        V[:, t+1] = CIR_exact(numberPaths, k, gamma, vb, 0, dt, V[:, t])
+        R[:, t+1] = CIR_exact(numberPaths, kr, gammar, mur, 0, dt, R[:, t])
+
+        rho[:, t+1] = rho[:, t]*np.exp(-krho*dt) + murho*(1 - np.exp(-krho*dt)) +\
+                    sigmarho*np.sqrt((1-np.exp(-2*krho*dt))/(2*krho))  * Zrho[:, t]
+
+        if (rho[:, t+1] > 1).any():
+            rho[np.where(rho[:, t+1] > 1)[0], t+1] = 0.999
+
+        if (rho[:, t+1] < 1).any():
+            rho[np.where(rho[:, t+1] < 1)[0], t+1] = -0.999
+
+        X[:, t+1] = X[:, t] + (R[:, t] - 0.5* V[:, t] - xip*(EeJ-1))*dt + rho[:, t]/gamma * (V[:, t+1] - V[:, t] - k*(vb - V[:, t])*dt) + \
+            rho4 * np.sqrt(V[:, t])/sigmarho * (rho[:, t+1] - rho[:, t] - krho*(murho - rho[:, t])*dt) + \
+            rho5 * np.sqrt(V[:, t])/(gammar*np.sqrt(R[:, t])) * (R[:, t+1] - R[:, t] - kr*(mur-R[:, t])*dt) +\
+            np.sqrt(V[:, t])* np.sqrt(1 - (R[:, t])**2 - rho4**2 - rho5**2) * np.sqrt(dt) * Zx[:, t] + J[:, t] * ZP[:, t]
+
+        M_t[:,t+1] = M_t[:,t] * np.exp(0.5*(R[:,t+1] + R[:,t])*dt)
+        time[t+1] = time[t] + dt
+
+    S = np.exp(X)
+
+    return time, S, M_t
+
+def optionPriceMC_Stoch(type_option, S, K, T, M):
+    # S is a vector of Monte Carlo samples at T
+    result = np.zeros([len(K),1])
+    if type_option == 'c' or type_option == 1:
+        for (idx,k) in enumerate(K):
+            result[idx] = np.mean(1/M * np.maximum(S-k,0.0))
+    elif type_option == 'p' or type_option == -1:
+        for (idx,k) in enumerate(K):
+            result[idx] = np.mean(1/M * np.maximum(k-S,0.0))
+    return result.T[0]

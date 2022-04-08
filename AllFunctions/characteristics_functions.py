@@ -102,7 +102,7 @@ def AFun(tau, u, muJ, sigmaJ, xip, k, vb, gamma, v0, krho, murho,
     I1 = -i*u*(np.exp(muJ+0.5*sigmaJ**2) - 1)*tau*xip + xip*(np.exp(muJ*i*u - 0.5*sigmaJ**2 * u**2) - 1)*tau +\
         k*vb*(k-e1)/(gamma**2) * (tau - np.exp(-l1*tau)/(-l1))
 
-    z = np.linspace(0, tau, 1000)
+    z = np.linspace(0, tau, 500)
 
     # f_I21 = lambda z1,u: np.exp(-c*(T-z1)) * DFun(z1, u, k, gamma, d1, l1, v0, vb, krho, T)
     # I21 = [integrate.trapz(np.array(list(map(lambda z1: f_I21(z1, var), z))), z) for var in u]
