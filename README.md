@@ -1,4 +1,4 @@
-# Stochastic Differential Equations
+# Option Pricing under Stochastic Differential Equations
 
 ## Graduate work
 
