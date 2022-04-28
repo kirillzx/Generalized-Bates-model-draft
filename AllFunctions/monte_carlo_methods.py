@@ -210,10 +210,10 @@ def bates_SC_SIR_AES(numberPaths, N, s0, v0, T, k, gamma, vb, kr, gammar, mur, k
                     sigmarho*np.sqrt((1-np.exp(-2*krho*dt))/(2*krho))  * Zrho[:, t]
 
         if (rho[:, t+1] > 1).any():
-            rho[np.where(rho[:, t+1] > 1)[0], t+1] = 0.999
+            rho[np.where(rho[:, t+1] > 1)[0], t+1] = 0.9999
 
-        if (rho[:, t+1] < 1).any():
-            rho[np.where(rho[:, t+1] < 1)[0], t+1] = -0.999
+        if (rho[:, t+1] < -1).any():
+            rho[np.where(rho[:, t+1] < 1)[0], t+1] = -0.9999
 
         X[:, t+1] = X[:, t] + (R[:, t] - 0.5* V[:, t] - xip*(EeJ-1))*dt + rho[:, t]/gamma * (V[:, t+1] - V[:, t] - k*(vb - V[:, t])*dt) + \
             rho4 * np.sqrt(V[:, t])/sigmarho * (rho[:, t+1] - rho[:, t] - krho*(murho - rho[:, t])*dt) + \
@@ -236,4 +236,15 @@ def optionPriceMC_Stoch(type_option, S, K, T, M):
     elif type_option == 'p' or type_option == -1:
         for (idx,k) in enumerate(K):
             result[idx] = np.mean(1/M * np.maximum(k-S,0.0))
+    return result.T[0]
+
+def optionPriceMC_Stoch_Tm(type_option, S, K, T, P0T):
+    # S is a vector of Monte Carlo samples at T
+    result = np.zeros([len(K),1])
+    if type_option == 'c' or type_option == 1:
+        for (idx,k) in enumerate(K):
+            result[idx] = P0T*np.mean(np.maximum(S-k,0.0))
+    elif type_option == 'p' or type_option == -1:
+        for (idx,k) in enumerate(K):
+            result[idx] = P0T*np.mean(np.maximum(k-S,0.0))
     return result.T[0]
