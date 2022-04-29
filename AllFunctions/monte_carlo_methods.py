@@ -213,7 +213,7 @@ def bates_SC_SIR_AES(numberPaths, N, s0, v0, T, k, gamma, vb, kr, gammar, mur, k
             rho[np.where(rho[:, t+1] > 1)[0], t+1] = 0.9999
 
         if (rho[:, t+1] < -1).any():
-            rho[np.where(rho[:, t+1] < 1)[0], t+1] = -0.9999
+            rho[np.where(rho[:, t+1] < -1)[0], t+1] = -0.9999
 
         X[:, t+1] = X[:, t] + (R[:, t] - 0.5* V[:, t] - xip*(EeJ-1))*dt + rho[:, t]/gamma * (V[:, t+1] - V[:, t] - k*(vb - V[:, t])*dt) + \
             rho4 * np.sqrt(V[:, t])/sigmarho * (rho[:, t+1] - rho[:, t] - krho*(murho - rho[:, t])*dt) + \
