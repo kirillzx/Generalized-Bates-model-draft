@@ -206,8 +206,11 @@ def bates_SC_SIR_AES(numberPaths, N, s0, v0, T, k, gamma, vb, kr, gammar, mur, k
         V[:, t+1] = CIR_exact(numberPaths, k, gamma, vb, 0, dt, V[:, t])
         R[:, t+1] = CIR_exact(numberPaths, kr, gammar, mur, 0, dt, R[:, t])
 
+        if (R[:, t+1] == 0).any():
+            R[np.where(R[:, t+1] == 0)[0], t+1] = 1e-4
+
         rho[:, t+1] = rho[:, t]*np.exp(-krho*dt) + murho*(1 - np.exp(-krho*dt)) +\
-                    sigmarho*np.sqrt((1-np.exp(-2*krho*dt))/(2*krho))  * Zrho[:, t]
+                    sigmarho*np.sqrt((1-np.exp(-2*krho*dt))/(2*krho)) * Zrho[:, t]
 
         if (rho[:, t+1] > 1).any():
             rho[np.where(rho[:, t+1] > 1)[0], t+1] = 0.9999
@@ -218,7 +221,7 @@ def bates_SC_SIR_AES(numberPaths, N, s0, v0, T, k, gamma, vb, kr, gammar, mur, k
         X[:, t+1] = X[:, t] + (R[:, t] - 0.5* V[:, t] - xip*(EeJ-1))*dt + rho[:, t]/gamma * (V[:, t+1] - V[:, t] - k*(vb - V[:, t])*dt) + \
             rho4 * np.sqrt(V[:, t])/sigmarho * (rho[:, t+1] - rho[:, t] - krho*(murho - rho[:, t])*dt) + \
             rho5 * np.sqrt(V[:, t])/(gammar*np.sqrt(R[:, t])) * (R[:, t+1] - R[:, t] - kr*(mur-R[:, t])*dt) +\
-            np.sqrt(V[:, t])* np.sqrt(1 - (R[:, t])**2 - rho4**2 - rho5**2) * np.sqrt(dt) * Zx[:, t] + J[:, t] * ZP[:, t]
+            np.sqrt(V[:, t])* np.sqrt(abs(1 - (rho[:, t])**2 - rho4**2 - rho5**2)) * np.sqrt(dt) * Zx[:, t] + J[:, t] * ZP[:, t]
 
         M_t[:,t+1] = M_t[:,t] * np.exp(0.5*(R[:,t+1] + R[:,t])*dt)
         time[t+1] = time[t] + dt
@@ -226,6 +229,59 @@ def bates_SC_SIR_AES(numberPaths, N, s0, v0, T, k, gamma, vb, kr, gammar, mur, k
     S = np.exp(X)
 
     return time, S, M_t
+
+def bates_SC_SIR_DCL_AES(numberPaths, N, s0, v0, T, k, gamma, vb, kr, gammar, mur, theta, delta, rho4, rho5,
+                    xip, muJ, sigmaJ, r0, rho0):
+    X = np.zeros([numberPaths, N + 1])
+    S = np.zeros([numberPaths, N + 1])
+    V = np.zeros([numberPaths, N + 1])
+    R = np.zeros([numberPaths, N + 1])
+    rho = np.zeros([numberPaths, N + 1])
+
+    M_t = np.ones([numberPaths, N + 1])
+    time = np.zeros(N + 1)
+    dt = T/float(N)
+
+    Zx = np.random.normal(0, 1, [numberPaths, N])
+    Zrho = np.random.normal(0, 1, [numberPaths, N])
+    ZP = np.random.poisson(xip*dt, [numberPaths, N])
+    J = np.random.normal(muJ, sigmaJ, [numberPaths, N])
+
+    X[:, 0] = np.log(s0)
+    V[:, 0] = v0
+    rho[:, 0] = rho0
+    R[:, 0] = abs(r0)
+
+    EeJ = np.exp(muJ + 0.5 * sigmaJ**2)
+
+    for t in range(N):
+
+        V[:, t+1] = CIR_exact(numberPaths, k, gamma, vb, 0, dt, V[:, t])
+        R[:, t+1] = CIR_exact(numberPaths, kr, gammar, mur, 0, dt, R[:, t])
+
+        if (R[:, t+1] == 0).any():
+            R[np.where(R[:, t+1] == 0)[0], t+1] = 1e-4
+
+        rho[:, t+1] = rho[:, t] - 1/theta * rho[:, t] * dt + np.sqrt((1 - (rho[:, t])**2)/(theta * (delta + 1))) * np.sqrt(dt) * Zrho[:, t]
+
+        if (rho[:, t+1] > 1).any():
+            rho[np.where(rho[:, t+1] > 1)[0], t+1] = 0.9999
+
+        if (rho[:, t+1] < -1).any():
+            rho[np.where(rho[:, t+1] < -1)[0], t+1] = -0.9999
+
+        X[:, t+1] = X[:, t] + (R[:, t] - 0.5* V[:, t] - xip*(EeJ-1))*dt + rho[:, t]/gamma * (V[:, t+1] - V[:, t] - k*(vb - V[:, t])*dt) + \
+            rho4 * np.sqrt(V[:, t])/np.sqrt((1-(rho[:, t])**2)/(theta*(delta+1))) * (rho[:, t+1] - rho[:, t] + rho[:, t]/theta * dt) + \
+            rho5 * np.sqrt(V[:, t])/(gammar*np.sqrt(R[:, t])) * (R[:, t+1] - R[:, t] - kr*(mur-R[:, t])*dt) +\
+            np.sqrt(V[:, t])* np.sqrt(abs(1 - (rho[:, t])**2 - rho4**2 - rho5**2)) * np.sqrt(dt) * Zx[:, t] + J[:, t] * ZP[:, t]
+
+        M_t[:,t+1] = M_t[:,t] * np.exp(0.5*(R[:,t+1] + R[:,t])*dt)
+        time[t+1] = time[t] + dt
+
+    S = np.exp(X)
+
+    return time, S, M_t
+
 
 def optionPriceMC_Stoch(type_option, S, K, T, M):
     # S is a vector of Monte Carlo samples at T
