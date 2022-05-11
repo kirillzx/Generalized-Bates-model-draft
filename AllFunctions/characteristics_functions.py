@@ -171,3 +171,93 @@ def ChFBates_StochIR_StochCor(tau, T, k, gamma, vb, kr, gammar, mur, krho, murho
     cf = lambda u: np.exp(aFun(u) + cFun(u)*r0 + dFun(u)*rho0 + eFun(u)*v0)
 
     return cf
+
+def AFun_DCL(tau, u, muJ, sigmaJ, xip, k, vb, gamma, v0, krho, delta,
+                        rho4, rho5, T, kr, gammar, mur, r0, rho0):
+    i = complex(0, 1)
+
+    e1 = np.sqrt(k**2 + (gamma**2) * (u**2 + i*u) + 0*i)
+    e2 = (k - e1) / (k + e1)
+    d1 = i*u * (k - e1)/gamma**2
+    l1 = -np.log( (np.exp(-e1) - e2*np.exp(-e1))/(1 - e2*np.exp(-e1)) )
+    c1 = np.sqrt(- (kr)**2 - 2 * gammar**2 + 2*i*u* gammar**2 + 0*i)
+    # c1 = np.sqrt(kr**2 + gammar**2 * (u**2 + i*u))
+    # c2 = (kr - c1) / (kr + c1)
+
+    ct = lambda t: 1/(4*k) * gamma**2 * (1 - np.exp(-k*t))
+    d11 = 4*k*vb/(gamma**2)
+    lambda1t = lambda t: (4*k*v0*np.exp(-k*t))/(gamma**2 * (1 - np.exp(-k*t)))
+
+    L1 = lambda t: np.sqrt(ct(t) * (lambda1t(t) - 1) + ct(t)*d11 + (ct(t)*d11)/(2*(d11+lambda1t(t))) + 0*i)
+
+    c2t = lambda t: 1/(4*kr) * gammar**2 * (1 - np.exp(-kr*t))
+    d2 = 4*kr*mur/(gammar**2)
+    lambda2t = lambda t: (4*kr*r0*np.exp(-kr*t))/(gammar**2 * (1 - np.exp(-kr*t)))
+
+    L2 = lambda t: np.sqrt(c2t(t) * (lambda2t(t) - 1) + c2t(t)*d2 + (c2t(t)*d2)/(2*(d2+lambda2t(t))) + 0*i)
+
+    a = np.sqrt(vb - (gamma**2)/(8*k) + 0*i)
+    b = np.sqrt(v0 + 0*i) - a
+    c = - np.log(1/b * (L1(1) - a) + 0*i)
+    m = np.sqrt(mur - (gammar**2)/(8*kr) + 0*i)
+    n = np.sqrt(r0 + 0*i) - m
+    o = - np.log(1/n * (L2(1) - m) + 0*i)
+
+    L3 = lambda t: np.sqrt(1 - (1/(2*(delta+1)+1) + (rho0 - 1/(2*(delta+1)+1))*np.exp(-2/krho - 1/(krho*(delta+1))*t) - (np.exp(-1/krho * t)*rho0)**4)/(1 - (np.exp(-1/krho * t)*rho0)**2) + 0*i)
+    crho = np.sqrt(1 - 1/(2*(delta+1) + 1) + 0*i)
+    arho = np.sqrt(1 - (1/(2*(delta+1)+1) + (rho0 - 1/(2*(delta+1) +1)) - rho0**4)/(1-rho0**2) + 0*i) -\
+        np.sqrt(1 - 1/(2*(delta+1)+1) + 0*i)
+    brho = -np.log((L3(1) - crho)/arho + 0*i)
+
+    I1 = -i*u*(np.exp(muJ+0.5*sigmaJ**2) - 1)*tau*xip + xip*(np.exp(muJ*i*u - 0.5*sigmaJ**2 * u**2) - 1)*tau +\
+        k*vb*(k-e1)/(gamma**2) * (tau - np.exp(-l1*tau)/(-l1))
+
+    z = np.linspace(0, tau, 500)
+
+    f_I21 = lambda z, u: DFun(z, u, k, gamma, v0, vb, 1/krho, T)
+    I21 = integrate.trapz(f_I21(z, u), z).reshape(u.size,1)
+
+    f_I22 = lambda z, u: np.exp(-(1/(krho*(delta+1)))*(T-z)) * (DFun(z, u, k, gamma, v0, vb, 1/krho, T))**2
+    I22 = integrate.trapz(f_I22(z, u), z).reshape(u.size,1)
+
+    f_I23 = lambda z, u: (DFun(z, u, k, gamma, v0, vb, 1/krho, T))**2
+    I23 = integrate.trapz(f_I23(z, u), z).reshape(u.size,1)
+
+    f_I24 = lambda z, u: np.exp(-brho*(T-z)) * DFun(z, u, k, gamma, v0, vb, 1/krho, T)
+    I24 = integrate.trapz(f_I24(z, u), z).reshape(u.size,1)
+
+    f_I25 = lambda z, u: np.exp((-c-brho)*(T-z)) * DFun(z, u, k, gamma, v0, vb, 1/krho, T)
+    I25 = integrate.trapz(f_I25(z, u), z).reshape(u.size,1)
+
+    f_I26 = lambda z, u: np.exp(-c*(T-z)) * DFun(z, u, k, gamma, v0, vb, 1/krho, T)
+    I26 = integrate.trapz(f_I26(z, u), z).reshape(u.size,1)
+
+    I2 = 1/(2*krho*(delta+1)) * (I23*(1 - 1/(2*(delta+1)+1)) + I22*(np.exp(-2/krho) * (1/(2*delta+1)+1) - rho0) +\
+        rho4*i*u/np.sqrt(krho*(delta+1)) * (a*arho*I24 + a*crho*I21 + b*arho*I25 + b*crho*I26) )
+
+    f_I31 = lambda z, u: CFun(z, u, kr, gammar)
+    f_I32 = lambda z, u: np.exp(-c*(T-z)) * CFun(z, u, kr, gammar)
+    f_I33 = lambda z, u: np.exp(-o*(T-z)) * CFun(z, u, kr, gammar)
+    f_I34 = lambda z, u: np.exp((-o-c)*(T-z)) * CFun(z, u, kr, gammar)
+
+    I31 = integrate.trapz(f_I31(z, u), z).reshape(u.size,1)
+    I32 = integrate.trapz(f_I32(z, u), z).reshape(u.size,1)
+    I33 = integrate.trapz(f_I33(z, u), z).reshape(u.size,1)
+    I34 = integrate.trapz(f_I34(z, u), z).reshape(u.size,1)
+
+    I3 = i*u*gammar*rho5 * (m*a*I31 + m*b*I32 + n*a*I33 + n*b*I34)
+
+    return I1 + I2  + I3
+
+def ChFBates_StochIR_StochCor_DCL(tau, T, k, gamma, vb, kr, gammar, mur, krho, delta, rho4, rho5,
+                    xip, muJ, sigmaJ, v0, r0, rho0):
+    i = complex(0.0, 1.0)
+    eFun = lambda u: EFun(tau, u, k, gamma)
+    cFun = lambda u: CFun(tau, u, kr, gammar)
+    dFun = lambda u: DFun(tau, u, k, gamma, v0, vb, 1/krho, T)
+    aFun = lambda u: AFun_DCL(tau, u, muJ, sigmaJ, xip, k, vb, gamma, v0, krho, delta,
+                            rho4, rho5, T, kr, gammar, mur, r0, rho0)
+
+    cf = lambda u: np.exp(aFun(u) + cFun(u)*r0 + dFun(u)*rho0 + eFun(u)*v0)
+
+    return cf

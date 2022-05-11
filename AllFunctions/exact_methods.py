@@ -91,7 +91,7 @@ def BS_Call_Option_Price(type_option, s0, K, sigma, tau, r):
     return value
 
 
-def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L,P0T):
+def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L):
 
     # cf   - Characteristic function is a function, in the book denoted by \varphi
     # CP   - C for call and P for put
@@ -117,15 +117,14 @@ def optionPriceCOSMthd_StochIR(cf, CP, s0,tau,K,N,L,P0T):
     k = np.linspace(0,N-1,N).reshape([N,1])
     u = k * np.pi / (b - a)
 
-    # Determine coefficients for put prices
-    H_k = Hk_Coefficients('p',a,b,k)
+
+    H_k = Hk_Coefficients(CP, a, b, k)
+
     mat = np.exp(i * np.outer((x0 - a) , u))
+
     temp = cf(u) * H_k
     temp[0] = 0.5 * temp[0]
-    value = K * np.real(mat.dot(temp))
 
-    # We use the put-call parity for call options
-    if CP == 'c':
-        value = value + s0 - K * P0T
+    value = K * np.real(mat.dot(temp))
 
     return value
