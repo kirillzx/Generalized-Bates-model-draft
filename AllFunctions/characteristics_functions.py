@@ -232,8 +232,8 @@ def AFun_DCL(tau, u, muJ, sigmaJ, xip, k, vb, gamma, v0, krho, delta,
     f_I26 = lambda z, u: np.exp(-c*(T-z)) * DFun(z, u, k, gamma, v0, vb, 1/krho, T)
     I26 = integrate.trapz(f_I26(z, u), z).reshape(u.size,1)
 
-    I2 = 1/(2*krho*(delta+1)) * (I23*(1 - 1/(2*(delta+1)+1)) + I22*(np.exp(-2/krho) * (1/(2*delta+1)+1) - rho0) +\
-        rho4*i*u/np.sqrt(krho*(delta+1)) * (a*arho*I24 + a*crho*I21 + b*arho*I25 + b*crho*I26) )
+    I2 = 1/(2*krho*(delta+1)) * (I23*(1 - 1/(2*(delta+1)+1)) + I22*(np.exp(-2/krho) * (1/(2*delta+1)+1) - rho0)) +\
+        rho4*i*u/np.sqrt(krho*(delta+1)) * (a*arho*I24 + a*crho*I21 + b*arho*I25 + b*crho*I26)
 
     f_I31 = lambda z, u: CFun(z, u, kr, gammar)
     f_I32 = lambda z, u: np.exp(-c*(T-z)) * CFun(z, u, kr, gammar)
